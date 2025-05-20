@@ -338,19 +338,51 @@ function setupControls() {
 }
 
 // Save the vessel as an image
+
 function saveVessel() {
     const renderTexture = PIXI.RenderTexture.create({
-        width: app.screen.width,
-        height: app.screen.height
+        width: 1024,
+        height: 1024
     });
 
-    app.renderer.render(app.stage, { renderTexture });
+    const background = new PIXI.Graphics();
+    background.beginFill(0xffffff);
+    background.drawRect(0, 0, 1024, 1024);
+    background.endFill();
+
+    const tempContainer = new PIXI.Container();
+    tempContainer.addChild(background);
+
+    const originalParent = sprites.container.parent;
+    const originalIndex = originalParent.children.indexOf(sprites.container);
+    const originalPosition = {
+        x: sprites.container.position.x,
+        y: sprites.container.position.y
+    };
+
+    originalParent.removeChild(sprites.container);
+
+    tempContainer.addChild(sprites.container);
+    sprites.container.position.set(512, 512);
+
+    app.renderer.render(tempContainer, { renderTexture });
+
+    tempContainer.removeChild(sprites.container);
+    if (originalIndex >= 0) {
+        originalParent.addChildAt(sprites.container, originalIndex);
+    } else {
+        originalParent.addChild(sprites.container);
+    }
+    sprites.container.position.set(originalPosition.x, originalPosition.y);
 
     const canvas = app.renderer.extract.canvas(renderTexture);
-    const image = canvas.toDataURL('image/png');
 
-    const link = document.createElement('a');
-    link.download = 'noodle-bloom.png';
+    renderTexture.destroy(true);
+    tempContainer.destroy(true);
+
+    const image = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = "noodle-bloom.png";
     link.href = image;
     link.click();
 }
