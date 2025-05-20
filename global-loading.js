@@ -1,5 +1,8 @@
 // Modified loading functionality for all pages
 function setupGlobalLoading() {
+    // Ensure page starts at the top
+    window.scrollTo(0, 0);
+    
     // Create loading overlay 
     if (!document.querySelector('.loading-overlay')) {
         const loadingOverlay = document.createElement('div');
@@ -26,7 +29,28 @@ function setupGlobalLoading() {
         const currentPath = window.location.pathname;
         const pageName = currentPath.split('/').pop() || 'index.html';
         
-        // Define navigation links
+        // Create logo container (left side)
+        const logoContainer = document.createElement('div');
+        logoContainer.className = 'logo-container';
+        
+        // Create logo link for home
+        const homeLogoLink = document.createElement('a');
+        homeLogoLink.href = 'index.html';
+        homeLogoLink.className = 'logo-link';
+        
+        // Create and add logo image
+        const logoImg = document.createElement('img');
+        logoImg.src = 'media/logo.svg';
+        logoImg.alt = 'Noodles & Beyond';
+        logoImg.className = 'nav-logo';
+        homeLogoLink.appendChild(logoImg);
+        logoContainer.appendChild(homeLogoLink);
+        
+        // Create navigation links container (right side)
+        const navLinksContainer = document.createElement('div');
+        navLinksContainer.className = 'nav-links';
+        
+        // Define navigation links (now including Home)
         const navLinks = [
             { href: 'index.html', text: 'Home' },
             { href: 'about.html', text: 'About' },
@@ -40,12 +64,17 @@ function setupGlobalLoading() {
             a.textContent = link.text;
             
             // Set active state for current page
-            if (pageName === link.href) {
+            if ((pageName === link.href) || 
+                (pageName === '' && link.href === 'index.html')) {
                 a.classList.add('active');
             }
             
-            navBar.appendChild(a);
+            navLinksContainer.appendChild(a);
         });
+        
+        // Add both containers to the nav bar
+        navBar.appendChild(logoContainer);
+        navBar.appendChild(navLinksContainer);
         
         document.body.appendChild(navBar);
     }
@@ -66,12 +95,27 @@ function hideLoading() {
 
 // Detect what page we're on and call the right initialization
 document.addEventListener('DOMContentLoaded', () => {
+    // Ensure page starts at the top
+    window.scrollTo(0, 0);
+    
     // Create loading overlay and navigation
     const loadingOverlay = setupGlobalLoading();
     
     // Get current page path
     const currentPath = window.location.pathname;
     const pageName = currentPath.split('/').pop() || 'index.html';
+    
+    // Handle back-to-top button
+    const backToTopBtn = document.getElementById('back-to-top');
+    if (backToTopBtn) {
+        backToTopBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
     
     // Handle page-specific loading
     if (pageName === 'game.html') {
@@ -89,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(hideLoading, 5000);
             };
         } else {
-
             let initCalled = false;
             Object.defineProperty(window, 'init', {
                 configurable: true,
@@ -124,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(hideLoading, 8000);
         
     } else if (pageName === 'index.html' || pageName === '') {
-
         let startSiteModified = false;
         
         const checkStartSite = setInterval(() => {
@@ -132,23 +174,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearInterval(checkStartSite);
                 startSiteModified = true;
                 
-
                 const originalStartSite = window.startSite;
                 window.startSite = function() {
                     originalStartSite();
                     
+                    // Ensure we start at the top of the page
+                    window.scrollTo(0, 0);
                     hideLoading();
                 };
             }
         }, 100);
         
-
         setTimeout(() => {
             clearInterval(checkStartSite);
+            window.scrollTo(0, 0);
             hideLoading();
-        }, 10000);
+        }, 30000);
     } else {
-
         setTimeout(hideLoading, 1000);
     }
 });

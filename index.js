@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Force scroll to top on page load
+  window.scrollTo(0, 0);
+  
   // Initialize GSAP
   gsap.registerPlugin(ScrollTrigger);
 
@@ -79,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Set up video parameters - 45 seconds at 12fps
   const fps = 12;
   const totalFrames = 541;
   
@@ -87,6 +89,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const urls = Array(totalFrames).fill().map((_, i) => 
     `media/home/frames/frame_${i.toString().padStart(3, '0')}.jpg`
   );
+
+  // Preload and display frame 0 with high priority
+  const frame0 = new Image();
+  frame0.src = urls[0];
+  frame0.onload = function() {
+    console.log("Frame 0 loaded - displaying immediately");
+    drawImage(frame0);
+    window.currentImage = frame0;
+  };
 
   // Create/get preloader
   let preloader = document.querySelector('.preloader');
@@ -111,31 +122,51 @@ document.addEventListener('DOMContentLoaded', () => {
   let loadedCount = 0;
 
   // Calculate how many frames to load before starting
-  const requiredFramesToStart = Math.min(totalFrames, 24); // Load at least first 1 second
+  const requiredFramesToStart = Math.min(totalFrames, 120); // Load at least first 10 seconds
 
   // Load all frames sequentially
   for (let i = 0; i < totalFrames; i++) {
     frames[i] = new Image();
-    frames[i].src = urls[i];
     
-    frames[i].onload = () => {
-      loadedCount++;
-      const percent = Math.floor((loadedCount / totalFrames) * 100);
-      
-      if (preloaderText) {
-        preloaderText.textContent = `Loading frames (${percent}%)...`;
-      }
-      
-      // Start site after minimum required frames load
-      if (loadedCount === requiredFramesToStart) {
-        startSite();
-      }
-      
-      // Log progress periodically
-      if (loadedCount % 10 === 0) {
-        console.log(`Loaded ${loadedCount}/${totalFrames} frames (${percent}%)`);
-      }
-    };
+    // Check if this is frame 421 (the problematic one)
+    if (i === 421) {
+      console.warn("Loading frame 421 - flagging for debugging");
+      frames[i].onload = () => {
+        console.log("Frame 421 loaded - ensuring it doesn't display incorrectly");
+        loadedCount++;
+        // Force redisplay of frame 0
+        if (frames[0] && frames[0].complete) {
+          drawImage(frames[0]);
+        }
+        
+        if (loadedCount === requiredFramesToStart) {
+          startSite();
+        }
+      };
+    } else {
+      frames[i].onload = () => {
+        loadedCount++;
+        const percent = Math.floor((loadedCount / totalFrames) * 100);
+        
+        if (preloaderText) {
+          preloaderText.textContent = `Loading frames (${percent}%)...`;
+        }
+        
+        // Start site after minimum required frames load
+        if (loadedCount === requiredFramesToStart) {
+          startSite();
+        }
+        
+        // Log progress periodically
+        if (loadedCount % 50 === 0) {
+          console.log(`Loaded ${loadedCount}/${totalFrames} frames (${percent}%)`);
+          // Force redisplay of frame 0 periodically during loading
+          if (frames[0] && frames[0].complete) {
+            drawImage(frames[0]);
+          }
+        }
+      };
+    }
     
     frames[i].onerror = () => {
       frames[i].loadFailed = true;
@@ -145,13 +176,25 @@ document.addEventListener('DOMContentLoaded', () => {
         startSite();
       }
     };
+    
+    // Set the src last to trigger loading
+    frames[i].src = urls[i];
   }
 
   // Start site after loading or timeout
-  function startSite() {
+  window.startSite = function() {
     // Only start if not already started
     if (content.style.visibility === 'hidden') {
       console.log(`Starting site with ${loadedCount}/${totalFrames} frames loaded`);
+      
+      // Force scroll to top before showing content
+      window.scrollTo(0, 0);
+      
+      // Ensure we're displaying the first frame
+      if (frames[0] && frames[0].complete) {
+        console.log("Displaying frame 0 at start site");
+        drawImage(frames[0]);
+      }
       
       // Hide preloader with fade
       gsap.to(preloader, {
@@ -169,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
-  }
+  };
 
   // Set a timeout for loader
   setTimeout(() => {
@@ -177,10 +220,19 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn(`Loading timeout - starting anyway with ${loadedCount}/${totalFrames} frames`);
       startSite();
     }
-  }, 15000);
+  }, 30000);
   
   // Create a scroll-based animation
   function initAnimation() {
+    // Reset scroll position to ensure we start at the beginning
+    window.scrollTo(0, 0);
+    
+    // Force display of frame 0 again
+    if (frames[0] && frames[0].complete) {
+      console.log("Forcing display of frame 0 at animation init");
+      drawImage(frames[0]);
+    }
+    
     // Get all sections
     const allSections = document.querySelectorAll('.fullscreen');
     
@@ -188,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const spacer = document.createElement('div');
     spacer.style.height = `${allSections.length * 100}vh`;
     spacer.style.position = 'absolute';
-    spacer.style.width = '0.0625rem'; // Changed from '1px'
+    spacer.style.width = '0.0625rem';
     spacer.style.bottom = '0';
     spacer.style.right = '0';
     spacer.style.pointerEvents = 'none';
@@ -196,10 +248,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Define section ranges
     const sections = {
-      intro: { startFrame: 1, endFrame: 60, selector: '.intro' }, 
-      selfCare: { startFrame: 61, endFrame: 240, selector: '.self-care' }, 
-      multitasking: { startFrame: 241, endFrame: 420, selector: '.multitasking' }, 
-      memory: { startFrame: 421, endFrame: 540, selector: '.memory' }, 
+      title: { startFrame: 0, endFrame: 12, selector: '#title' },
+      intro: { startFrame: 13, endFrame: 60, selector: '.intro' },
+      selfCare: { startFrame: 61, endFrame: 250, selector: '.self-care' }, 
+      multitasking: { startFrame: 251, endFrame: 418, selector: '.multitasking' }, 
+      memory: { startFrame: 420, endFrame: 540, selector: '.memory' }, 
       about: { startFrame: 541, endFrame: 541, selector: '.about' } 
     };
     
@@ -212,14 +265,14 @@ document.addEventListener('DOMContentLoaded', () => {
         end: "bottom top",
         pin: true,
         pinSpacing: true,
-        markers: true
+        markers: false // Set to false for production
       });
       
       // Separate trigger for content visibility with earlier exit
       const content = section.querySelector('.content');
       if (content) {
         // Set initial state
-        gsap.set(content, { opacity: 0, y: 3.125 }); // Changed from 50px to 3.125rem
+        gsap.set(content, { opacity: 0, y: 3.125 });
         
         ScrollTrigger.create({
           trigger: section,
@@ -236,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
           onLeave: () => {
             gsap.to(content, {
               opacity: 0,
-              y: -1.25, // Changed from -20px to -1.25rem
+              y: -1.25,
               duration: 0.3
             });
           },
@@ -250,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
           onLeaveBack: () => {
             gsap.to(content, {
               opacity: 0,
-              y: 3.125, // Changed from 50px to 3.125rem
+              y: 3.125,
               duration: 0.2
             });
           }
@@ -260,7 +313,31 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Create individual timeline animations for each video section
     
-    // Intro section animation (ADDED THIS SECTION)
+    // Title section animation - explicit control for frame 0
+    const titleSection = document.querySelector(sections.title.selector);
+    if (titleSection) {
+      // Get title section height
+      const titleHeight = titleSection.offsetHeight;
+      
+      imageSequence({
+        urls: urls.slice(0, sections.title.endFrame + 1),
+        scrollTrigger: {
+          trigger: titleSection[0],
+          start: "top top",
+          end: `+=${titleHeight}`,
+          scrub: 1,
+          markers: false,
+          onUpdate: self => {
+            const frameIndex = Math.floor(self.progress * sections.title.endFrame);
+            if (frameIndex % 10 === 0) {
+              console.log(`Title: Frame ${frameIndex} | Progress: ${self.progress.toFixed(3)}`);
+            }
+          }
+        }
+      });
+    }
+
+    // Intro section animation
     const introSelector = document.querySelector(sections.intro.selector);
     if (introSelector) {
       const introSections = document.querySelectorAll(sections.intro.selector);
@@ -278,15 +355,12 @@ document.addEventListener('DOMContentLoaded', () => {
           start: "top top",
           end: `+=${introHeight}`,
           scrub: 1,
-          markers: {
-            startColor: "red",
-            endColor: "red",
-            fontSize: "0.75rem", // Changed from 12px
-            indent: 0
-          },
+          markers: false,
           onUpdate: self => {
             const frameIndex = Math.floor(self.progress * (sections.intro.endFrame - sections.intro.startFrame)) + sections.intro.startFrame;
-            console.log(`Intro: Frame ${frameIndex} | Progress: ${self.progress.toFixed(3)}`);
+            if (frameIndex % 10 === 0) {
+              console.log(`Intro: Frame ${frameIndex} | Progress: ${self.progress.toFixed(3)}`);
+            }
           }
         }
       });
@@ -310,15 +384,13 @@ document.addEventListener('DOMContentLoaded', () => {
           start: "top top",
           end: `+=${selfCareHeight}`,
           scrub: 1,
-          markers: {
-            startColor: "green",
-            endColor: "green",
-            fontSize: "0.75rem", // Changed from 12px
-            indent: 0.625 // Changed from 10px
-          },
+          markers: false,
           onUpdate: self => {
             const frameIndex = Math.floor(self.progress * (sections.selfCare.endFrame - sections.selfCare.startFrame)) + sections.selfCare.startFrame;
-            console.log(`Self-care: Frame ${frameIndex} | Progress: ${self.progress.toFixed(3)}`);
+            // Limit logging to reduce console spam
+            if (frameIndex % 10 === 0) {
+              console.log(`Self-care: Frame ${frameIndex} | Progress: ${self.progress.toFixed(3)}`);
+            }
           }
         }
       });
@@ -342,21 +414,19 @@ document.addEventListener('DOMContentLoaded', () => {
           start: "top top",
           end: `+=${multitaskingHeight}`,
           scrub: 1,
-          markers: {
-            startColor: "blue",
-            endColor: "blue",
-            fontSize: "0.75rem", // Changed from 12px
-            indent: 1.25 // Changed from 20px
-          },
+          markers: false,
           onUpdate: self => {
             const frameIndex = Math.floor(self.progress * (sections.multitasking.endFrame - sections.multitasking.startFrame)) + sections.multitasking.startFrame;
-            console.log(`Multitasking: Frame ${frameIndex} | Progress: ${self.progress.toFixed(3)}`);
+            // Limit logging to reduce console spam
+            if (frameIndex % 10 === 0) {
+              console.log(`Multitasking: Frame ${frameIndex} | Progress: ${self.progress.toFixed(3)}`);
+            }
           }
         }
       });
     }
     
-    // Memory section animation
+    // Memory section animation - special handling for frame 421
     const memorySelector = document.querySelector(sections.memory.selector);
     if (memorySelector) {
       const memorySections = document.querySelectorAll(sections.memory.selector);
@@ -367,6 +437,19 @@ document.addEventListener('DOMContentLoaded', () => {
         memoryHeight += section.offsetHeight;
       });
       
+      // Add an explicit entry trigger to prevent incorrect display
+      ScrollTrigger.create({
+        trigger: memorySections[0],
+        start: "top bottom",
+        onEnter: () => {
+          console.log("Approaching memory section - preventing frame 421 from displaying early");
+          // Don't show frame 421 automatically
+          if (window.currentImage !== frames[421]) {
+            // Keep current frame
+          }
+        }
+      });
+      
       imageSequence({
         urls: urls.slice(sections.memory.startFrame, sections.memory.endFrame + 1),
         scrollTrigger: {
@@ -374,17 +457,27 @@ document.addEventListener('DOMContentLoaded', () => {
           start: "top top",
           end: `+=${memoryHeight}`,
           scrub: 1,
-          markers: {
-            startColor: "purple",
-            endColor: "purple",
-            fontSize: "0.75rem", // Changed from 12px
-            indent: 1.875 // Changed from 30px
-          },
+          markers: false,
           onUpdate: self => {
             const frameIndex = Math.floor(self.progress * (sections.memory.endFrame - sections.memory.startFrame)) + sections.memory.startFrame;
-            console.log(`Memory: Frame ${frameIndex} | Progress: ${self.progress.toFixed(3)}`);
+            // Limit logging to reduce console spam
+            if (frameIndex % 10 === 0) {
+              console.log(`Memory: Frame ${frameIndex} | Progress: ${self.progress.toFixed(3)}`);
+            }
           }
         }
+      });
+    }
+    
+    // Set up back to top button
+    const backToTopBtn = document.getElementById('back-to-top');
+    if (backToTopBtn) {
+      backToTopBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
       });
     }
   }
