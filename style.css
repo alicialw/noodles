@@ -350,7 +350,7 @@ p {
 }
 
 .about-content {
-    background-color: rgba(255, 255, 255, 0.9);
+    /*background-color: rgba(255, 255, 255, 0.9);*/
     padding: 3rem;
     border-radius: 0.5rem;
 }
@@ -398,7 +398,7 @@ p {
 
 .arrow {
     text-align: center;
-    font-size: 7rem;
+    font-size: 5rem;
     font-weight: 700;
     color: var(--light);
     position: absolute;
