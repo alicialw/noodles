@@ -392,9 +392,7 @@ p {
     margin-bottom: 3rem;
 }
 
-.creator-header h1 {
-    
-}
+
 
 .arrow {
     text-align: center;
@@ -604,6 +602,10 @@ input[type="checkbox"]:checked {
 
     .creator-container {
         padding-top : 10rem !important;
+    }
+
+    .creator-header h1 {
+        font-size: 3rem;
     }
 
 }
