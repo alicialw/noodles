@@ -396,6 +396,30 @@ p {
     
 }
 
+.arrow {
+    text-align: center;
+    font-size: 7rem;
+    font-weight: 700;
+    color: var(--light);
+    position: absolute;
+    width: 100%;
+    bottom: -35vh;
+    left: 0;
+    animation: updown 2s ease-in-out infinite;
+}
+
+@keyframes updown {
+    0% {
+        transform: translate(0,0)
+    }
+    50% {
+        transform: translate(0,-5vh);
+    }
+    100% {
+        transform: translate(0,0)
+    }
+}
+
 .creator-content {
     display: flex;
     flex-direction: column;
